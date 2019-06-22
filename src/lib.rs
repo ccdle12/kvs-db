@@ -10,7 +10,8 @@ impl KvStore {
     }
 
     pub fn get(&self, req: String) -> Option<String> {
-        panic!()
+        eprintln!("unimplemented");
+        std::process::exit(1);
     }
 
     pub fn remove(&self, key: String) {
