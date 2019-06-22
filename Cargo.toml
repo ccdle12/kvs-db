@@ -5,7 +5,5 @@ authors = ["ccdle12 <chris.coverdale24@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-
-[dev-depedencies]
 assert_cmd = "0.11.0"
 predicates = "1.0.0"
