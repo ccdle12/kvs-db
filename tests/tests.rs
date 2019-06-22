@@ -24,7 +24,7 @@ fn cli_version() {
 fn cli_get() {
     Command::cargo_bin("kvs")
         .unwrap()
-        .args(&["get", "key1"])
+        .args(&["--get", "key1"])
         .assert()
         .failure()
         .stderr(contains("unimplemented"));
@@ -35,7 +35,7 @@ fn cli_get() {
 fn cli_set() {
     Command::cargo_bin("kvs")
         .unwrap()
-        .args(&["set", "key1", "value1"])
+        .args(&["--set", "key1", "value1"])
         .assert()
         .failure()
         .stderr(contains("unimplemented"));
