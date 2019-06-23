@@ -9,7 +9,7 @@ fn main() {
     let m = App::from_yaml(yaml).get_matches();
 
     // TEMP:
-    let kv_store = KvStore::new();
+    let mut kv_store = KvStore::new();
 
     // Match on get.
     if let Some(key) = m.value_of("get") {
