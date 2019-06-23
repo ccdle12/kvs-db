@@ -19,3 +19,9 @@ args:
         value_name: KEY
         help: Gets the value according to the key passed
         takes_value: true
+    - remove:
+        short: r
+        long: rm
+        value_name: KEY
+        help: Removes the value according to the key passed
+        takes_value: true
