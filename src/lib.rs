@@ -1,18 +1,20 @@
-pub struct KvStore {}
+pub struct KvStore {
+    store: std::collections::HashMap<String, String>,
+}
 
 impl KvStore {
     pub fn new() -> KvStore {
-        KvStore {}
+        let store = std::collections::HashMap::new();
+        KvStore { store }
     }
 
-    pub fn set(&self, key: String, val: String) {
-        eprintln!("unimplemented");
-        std::process::exit(1);
+    pub fn set(&mut self, key: String, val: String) {
+        self.store.insert(key, val);
     }
 
-    pub fn get(&self, req: String) -> Option<String> {
-        eprintln!("unimplemented");
-        std::process::exit(1);
+    pub fn get(&self, key: String) -> Option<String> {
+        // Clone the value from the store.
+        self.store.get(&key).cloned()
     }
 
     pub fn remove(&self, key: String) {
