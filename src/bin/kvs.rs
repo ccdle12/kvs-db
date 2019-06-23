@@ -1,12 +1,16 @@
-#[macro_use]
-extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
-
-use kvs::KvStore;
 
 fn main() {
     // Using programmatic implementation of CLI.
-    let m = App::new(env!("CARGO_PKG_NAME"))
+    let m = init_app();
+
+    // Switching on the subcommand that is passed.
+    parse_subcommands(&m);
+}
+
+// Initialises an instance of the CLI and gets the matches..
+fn init_app<'a>() -> clap::ArgMatches<'a> {
+    App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
@@ -33,9 +37,11 @@ fn main() {
                 .about("Remove a given key")
                 .arg(Arg::with_name("KEY").help("A string key").required(true)),
         )
-        .get_matches();
+        .get_matches()
+}
 
-    // Switching on the subcommand that is passed.
+// Parse and switch the subcommands.
+fn parse_subcommands(m: &clap::ArgMatches) {
     match m.subcommand() {
         ("set", Some(_m)) => {
             eprintln!("unimplemented");
