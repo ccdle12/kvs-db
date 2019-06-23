@@ -46,7 +46,7 @@ fn cli_set() {
 fn cli_rm() {
     Command::cargo_bin("kvs")
         .unwrap()
-        .args(&["rm", "key1"])
+        .args(&["--rm", "key1"])
         .assert()
         .failure()
         .stderr(contains("unimplemented"));
