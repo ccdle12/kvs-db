@@ -16,6 +16,11 @@ fn main() {
         kv_store.get(key.to_string());
     }
 
+    // Match on rm.
+    if let Some(key) = m.value_of("remove") {
+        kv_store.remove(key.to_string());
+    }
+
     // TEMP: just exits on eror for now.
     std::process::exit(1);
 }
