@@ -6,7 +6,8 @@ impl KvStore {
     }
 
     pub fn set(&self, key: String, val: String) {
-        panic!()
+        eprintln!("unimplemented");
+        std::process::exit(1);
     }
 
     pub fn get(&self, req: String) -> Option<String> {
@@ -15,6 +16,7 @@ impl KvStore {
     }
 
     pub fn remove(&self, key: String) {
-        panic!()
+        eprintln!("unimplemented");
+        std::process::exit(1);
     }
 }
