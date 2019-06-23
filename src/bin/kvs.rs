@@ -1,34 +1,54 @@
 #[macro_use]
 extern crate clap;
-use clap::App;
+use clap::{App, AppSettings, Arg, SubCommand};
 
 use kvs::KvStore;
 
 fn main() {
-    let yaml = load_yaml!("cli.yml");
-    let m = App::from_yaml(yaml).get_matches();
+    // Using programmatic implementation of CLI.
+    let m = App::new(env!("CARGO_PKG_NAME"))
+        .version(env!("CARGO_PKG_VERSION"))
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about(env!("CARGO_PKG_DESCRIPTION"))
+        .setting(AppSettings::DisableHelpSubcommand)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .setting(AppSettings::VersionlessSubcommands)
+        .subcommand(
+            SubCommand::with_name("set")
+                .about("Set the value of a string key to a string")
+                .arg(Arg::with_name("KEY").help("A string key").required(true))
+                .arg(
+                    Arg::with_name("VALUE")
+                        .help("The string value of the key")
+                        .required(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("get")
+                .about("Get the string value of a given string key")
+                .arg(Arg::with_name("KEY").help("A string key").required(true)),
+        )
+        .subcommand(
+            SubCommand::with_name("rm")
+                .about("Remove a given key")
+                .arg(Arg::with_name("KEY").help("A string key").required(true)),
+        )
+        .get_matches();
 
-    // TEMP:
-    let mut kv_store = KvStore::new();
-
-    // Match on get.
-    if let Some(key) = m.value_of("get") {
-        kv_store.get(key.to_string());
+    // Switching on the subcommand that is passed.
+    match m.subcommand() {
+        ("set", Some(_m)) => {
+            eprintln!("unimplemented");
+            std::process::exit(1);
+        }
+        ("get", Some(_m)) => {
+            eprintln!("unimplemented");
+            std::process::exit(1);
+        }
+        ("rm", Some(_m)) => {
+            eprintln!("unimplemented");
+            std::process::exit(1);
+        }
+        _ => unreachable!(),
     }
-
-    // Match on rm.
-    if let Some(key) = m.value_of("remove") {
-        kv_store.remove(key.to_string());
-    }
-
-    // Match on set.
-    if let Some(mut kv) = m.values_of("set") {
-        let key = kv.next().unwrap().to_string();
-        let value = kv.next().unwrap().to_string();
-
-        kv_store.set(key, value);
-    }
-
-    // TEMP: just exits on eror for now.
-    std::process::exit(1);
 }
