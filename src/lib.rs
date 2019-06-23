@@ -17,8 +17,7 @@ impl KvStore {
         self.store.get(&key).cloned()
     }
 
-    pub fn remove(&self, key: String) {
-        eprintln!("unimplemented");
-        std::process::exit(1);
+    pub fn remove(&mut self, key: String) {
+        self.store.remove(&key);
     }
 }
