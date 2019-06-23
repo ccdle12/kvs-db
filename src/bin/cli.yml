@@ -25,3 +25,10 @@ args:
         value_name: KEY
         help: Removes the value according to the key passed
         takes_value: true
+    - set:
+        short: s
+        long: set
+        help: Sets a key/value pair
+        value_names:
+            - key
+            - value
