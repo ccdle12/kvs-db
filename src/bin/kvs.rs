@@ -21,6 +21,14 @@ fn main() {
         kv_store.remove(key.to_string());
     }
 
+    // Match on set.
+    if let Some(mut kv) = m.values_of("set") {
+        let key = kv.next().unwrap().to_string();
+        let value = kv.next().unwrap().to_string();
+
+        kv_store.set(key, value);
+    }
+
     // TEMP: just exits on eror for now.
     std::process::exit(1);
 }
