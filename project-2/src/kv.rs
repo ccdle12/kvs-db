@@ -1,6 +1,7 @@
 /// The `KvStore` stores a key/value pair of strings.
 ///
-/// Key/value pairs are stored in a `HashMap` in memory and not persisted to disk.
+/// Key/value pairs are stored in a `HashMap` in memory and not persisted to
+/// disk.
 ///
 /// Example:
 ///
