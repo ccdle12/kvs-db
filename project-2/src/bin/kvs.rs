@@ -1,5 +1,6 @@
 extern crate structopt;
 
+use kvs::Result;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -30,7 +31,7 @@ enum Opt {
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
     match Opt::from_args() {
         Opt::Set { key, value } => {
             eprintln!("unimplemented");
