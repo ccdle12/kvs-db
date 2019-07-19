@@ -1,7 +1,6 @@
 extern crate structopt;
 use kvs::{KvStore, Result};
-use std::path::Path;
-use std::{env, fs};
+use std::env;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
