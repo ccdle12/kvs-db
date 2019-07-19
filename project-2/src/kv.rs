@@ -64,12 +64,13 @@ impl KvStore {
     ///
     /// ```rust
     /// # use kvs::KvStore;
+    /// # use fs::env;
     /// ...
     ///
     /// let key = "hello";
     /// let value = "world";
     ///
-    /// let mut kv_store = KvStore::open(log_path)?;
+    /// let mut kv_store = KvStore::open(&env::current_dir()?)?;
     /// kv_store.set(key, value)?;
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
