@@ -43,7 +43,7 @@ impl KvStore {
 
         Ok(KvStore {
             store: HashMap::new(),
-            path_buf: path_buf.to_path_buf(),
+            path_buf,
         })
     }
 
