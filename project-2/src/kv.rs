@@ -8,17 +8,6 @@ use std::path::{Path, PathBuf};
 ///
 /// Key/value pairs are stored in a `HashMap` in memory and not persisted to
 /// disk.
-///
-/// Example:
-///
-/// ```rust
-/// # use kvs::KvStore;
-/// let mut store = KvStore::new();
-/// store.set("key".to_owned(), "value".to_owned());
-///
-/// let val = store.get("key".to_owned());
-/// assert_eq!(val, Some("value".to_owned()));
-/// ```
 pub struct KvStore {
     /// Store is the in memory key/value store.
     store: HashMap<String, String>,
@@ -35,8 +24,10 @@ impl KvStore {
     ///
     /// ```rust
     /// # use kvs::KvStore;
-    /// # use fs::env;
-    /// let mut kv_store = KvStore::open(&env::curent_dir()?)?;
+    /// # use std::env;
+    ///
+    /// let current_dir = env::current_dir().unwrap();
+    /// let mut kv_store = KvStore::open(&current_dir).unwrap();
     /// ```
     pub fn open(path: &Path) -> Result<KvStore> {
         create_dir_all(&path)?;
@@ -64,14 +55,13 @@ impl KvStore {
     ///
     /// ```rust
     /// # use kvs::KvStore;
-    /// # use fs::env;
-    /// ...
-    ///
+    /// # use std::env;
     /// let key = "hello";
     /// let value = "world";
     ///
-    /// let mut kv_store = KvStore::open(&env::current_dir()?)?;
-    /// kv_store.set(key, value)?;
+    /// let current_dir = env::current_dir().unwrap();
+    /// let mut kv_store = KvStore::open(&current_dir).unwrap();
+    /// kv_store.set(key.to_string(), value.to_string()).unwrap();
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
         let file_handler = OpenOptions::new()
@@ -79,7 +69,7 @@ impl KvStore {
             .open(&self.path_buf)
             .expect("failed to open path_buf when setting key/value.");
 
-        serde_json::to_writer(&file_handler, &Command::Set { key, value })?;
+        serde_json::to_writer(file_handler, &Command::Set { key, value })?;
 
         Ok(())
     }
