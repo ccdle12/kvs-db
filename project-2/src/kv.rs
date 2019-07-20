@@ -2,7 +2,7 @@ use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// The `KvStore` stores a key/value pair of strings.
 ///
@@ -29,10 +29,9 @@ impl KvStore {
     /// let current_dir = env::current_dir().unwrap();
     /// let mut kv_store = KvStore::open(&current_dir).unwrap();
     /// ```
-    pub fn open(path: &Path) -> Result<KvStore> {
-        create_dir_all(&path)?;
+    pub fn open(mut path_buf: PathBuf) -> Result<KvStore> {
+        create_dir_all(&path_buf)?;
 
-        let mut path_buf = PathBuf::from(&path);
         path_buf.push("log");
         path_buf.set_extension("txt");
 
@@ -44,7 +43,7 @@ impl KvStore {
 
         Ok(KvStore {
             store: HashMap::new(),
-            path_buf,
+            path_buf: path_buf.to_path_buf(),
         })
     }
 
