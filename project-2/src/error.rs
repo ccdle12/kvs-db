@@ -6,6 +6,10 @@ pub enum KvStoreError {
     #[fail(display = "An unknown error has occurred")]
     UnknownError,
 
+    /// Error for a key not found in the key value store.
+    #[fail(display = "Key not found")]
+    KeyNotFoundError,
+
     /// Serde serialization and deserialization errors.
     #[fail(display = "{}", _0)]
     Serde(#[cause] serde_json::Error),
