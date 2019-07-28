@@ -34,20 +34,28 @@ enum Opt {
 fn main() -> Result<()> {
     match Opt::from_args() {
         Opt::Set { key, value } => {
-            let mut kv_store = KvStore::open(env::current_dir()?)?;
+            let mut kv_store = KvStore::open(&env::current_dir()?)?;
             kv_store.set(key, value)?;
 
             std::process::exit(0);
         }
         Opt::Get { key } => {
-            let kv_store = KvStore::open(env::current_dir()?)?;
-            eprintln!("unimplemented");
+            let kv_store = KvStore::open(&env::current_dir()?)?;
 
-            std::process::exit(1);
+            match kv_store.get(key) {
+                Ok(value) => println!("{}", value.unwrap()),
+                Err(e) => println!("{}", e),
+            }
+
+            std::process::exit(0);
         }
         Opt::Remove { key } => {
-            let mut kv_store = KvStore::open(env::current_dir()?)?;
-            let _result = kv_store.remove(key);
+            let mut kv_store = KvStore::open(&env::current_dir()?)?;
+
+            if let Err(e) = kv_store.remove(key) {
+                println!("{}", e);
+                std::process::exit(1);
+            }
 
             std::process::exit(0);
         }
