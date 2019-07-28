@@ -1,5 +1,6 @@
 extern crate structopt;
-
+use kvs::{KvStore, Result};
+use std::env;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -30,19 +31,33 @@ enum Opt {
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
     match Opt::from_args() {
         Opt::Set { key, value } => {
-            eprintln!("unimplemented");
-            std::process::exit(1);
+            let mut kv_store = KvStore::open(&env::current_dir()?)?;
+            kv_store.set(key, value)?;
+
+            std::process::exit(0);
         }
         Opt::Get { key } => {
-            eprintln!("unimplemented");
-            std::process::exit(1);
+            let kv_store = KvStore::open(&env::current_dir()?)?;
+
+            match kv_store.get(key) {
+                Ok(value) => println!("{}", value.unwrap()),
+                Err(e) => println!("{}", e),
+            }
+
+            std::process::exit(0);
         }
         Opt::Remove { key } => {
-            eprintln!("unimplemented");
-            std::process::exit(1);
+            let mut kv_store = KvStore::open(&env::current_dir()?)?;
+
+            if let Err(e) = kv_store.remove(key) {
+                println!("{}", e);
+                std::process::exit(1);
+            }
+
+            std::process::exit(0);
         }
     }
 }

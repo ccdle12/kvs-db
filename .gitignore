@@ -2,3 +2,5 @@ target
 **/*.rs.bk
 Cargo.lock
 *.swp
+tags
+*/TODO-NOTES.md
