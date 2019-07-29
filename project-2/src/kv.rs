@@ -44,22 +44,7 @@ impl KvStore {
             .open(&path_buf)
             .expect("failed to create file using path_buf");
 
-        // Create the kv store.
-        let mut store = HashMap::new();
-
-        // Opens the log file and reads each line. The logs are deserialized
-        // and updated in the in-memory store.
-        for line in BufReader::new(file_handler).lines() {
-            let cmd: Command = serde_json::from_str(&line?)?;
-
-            if let Command::Set { key, value } = &cmd {
-                store.insert(key.to_string(), value.to_string());
-            };
-
-            if let Command::Remove { key } = &cmd {
-                store.remove(&key.to_string());
-            };
-        }
+        let store = unpack_log_file(file_handler)?;
 
         Ok(KvStore { store, path_buf })
     }
@@ -134,6 +119,29 @@ impl KvStore {
         let file_handler = OpenOptions::new().append(true).open(&self.path_buf)?;
         Ok(file_handler)
     }
+}
+
+/// Function that unpacks a log file given a file handler and returns an in-memory
+/// k/v store with the read logs.
+fn unpack_log_file(file_handler: impl Read) -> Result<HashMap<String, String>> {
+    // Create the kv store.
+    let mut store = HashMap::new();
+
+    // Opens the log file and reads each line. The logs are deserialized
+    // and updated in an in-memory store.
+    for line in BufReader::new(file_handler).lines() {
+        let cmd: Command = serde_json::from_str(&line?)?;
+
+        if let Command::Set { key, value } = &cmd {
+            store.insert(key.to_string(), value.to_string());
+        };
+
+        if let Command::Remove { key } = &cmd {
+            store.remove(&key.to_string());
+        };
+    }
+
+    Ok(store)
 }
 
 /// Command is an enum with each possible command of the database. Each enum
