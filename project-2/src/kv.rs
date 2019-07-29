@@ -96,7 +96,6 @@ impl KvStore {
     pub fn get(&self, key: String) -> Result<Option<String>> {
         // Clone the value from the store.
         let value = self.store.get(&key).cloned();
-        self.write_cmd(&Command::Get { key }, self.log_file_append_only()?)?;
 
         match value {
             Some(v) => Ok(Some(v)),
