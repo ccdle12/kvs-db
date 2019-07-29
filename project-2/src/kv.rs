@@ -32,34 +32,9 @@ impl KvStore {
     /// let mut kv_store = KvStore::open(&current_dir).unwrap();
     /// ```
     pub fn open(path: &Path) -> Result<KvStore> {
-        let mut path_buf = PathBuf::from(path);
-        create_dir_all(&path_buf)?;
-
-        path_buf.push("log");
-        path_buf.set_extension("txt");
-        let file_handler = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(&path_buf)
-            .expect("failed to create file using path_buf");
-
-        // Create the kv store.
-        let mut store = HashMap::new();
-
-        // Opens the log file and reads each line. The logs are deserialized
-        // and updated in the in-memory store.
-        for line in BufReader::new(file_handler).lines() {
-            let cmd: Command = serde_json::from_str(&line?)?;
-
-            if let Command::Set { key, value } = &cmd {
-                store.insert(key.to_string(), value.to_string());
-            };
-
-            if let Command::Remove { key } = &cmd {
-                store.remove(&key.to_string());
-            };
-        }
+        let path_buf = create_log_file(path)?;
+        let file_handler = open_file_all_permissions(&path_buf)?;
+        let store = unpack_log_file(file_handler)?;
 
         Ok(KvStore { store, path_buf })
     }
@@ -81,7 +56,7 @@ impl KvStore {
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
         let set_cmd = Command::Set { key, value };
-        self.write_cmd(&set_cmd, self.log_file_append_only()?)?;
+        self.write_cmd(&set_cmd, open_file_append_only(&self.path_buf)?)?;
 
         if let Command::Set { key, value } = set_cmd {
             self.store.insert(key, value);
@@ -96,7 +71,10 @@ impl KvStore {
     pub fn get(&self, key: String) -> Result<Option<String>> {
         // Clone the value from the store.
         let value = self.store.get(&key).cloned();
-        self.write_cmd(&Command::Get { key }, self.log_file_append_only()?)?;
+        self.write_cmd(
+            &Command::Get { key },
+            open_file_append_only(&self.path_buf)?,
+        )?;
 
         match value {
             Some(v) => Ok(Some(v)),
@@ -107,7 +85,7 @@ impl KvStore {
     /// Removes a key/value pair given a string key.
     pub fn remove(&mut self, key: String) -> Result<()> {
         let cmd = Command::Remove { key };
-        self.write_cmd(&cmd, self.log_file_append_only()?)?;
+        self.write_cmd(&cmd, open_file_append_only(&self.path_buf)?)?;
 
         if let Command::Remove { key } = cmd {
             match self.store.remove(&key) {
@@ -128,12 +106,59 @@ impl KvStore {
 
         Ok(())
     }
+}
 
-    /// Private helper function to return a file handler as read only to the log.
-    fn log_file_append_only(&self) -> Result<File> {
-        let file_handler = OpenOptions::new().append(true).open(&self.path_buf)?;
-        Ok(file_handler)
+/// Creates the log file for the `write-ahead-log` given a file path.
+fn create_log_file(path: &Path) -> Result<PathBuf> {
+    let mut path_buf = PathBuf::from(path);
+    create_dir_all(&path_buf)?;
+
+    path_buf.push("log");
+    path_buf.set_extension("txt");
+
+    Ok(path_buf)
+}
+
+/// Opens a file as append only given a path to the file.
+fn open_file_append_only(path: &PathBuf) -> Result<File> {
+    let file_handler = OpenOptions::new().append(true).open(path)?;
+
+    Ok(file_handler)
+}
+
+/// Opens a file with read/write permissions and creates the file it doesn't
+/// exist.
+fn open_file_all_permissions(path: &PathBuf) -> Result<File> {
+    let file_handler = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(path)?;
+
+    Ok(file_handler)
+}
+
+/// Function that unpacks a log file given a file handler and returns an in-memory
+/// k/v store with the read logs.
+fn unpack_log_file(file_handler: impl Read) -> Result<HashMap<String, String>> {
+    // Create the kv store.
+    let mut store = HashMap::new();
+
+    // Opens the log file and reads each line. The logs are deserialized
+    // and updated in a returned in-memory store.
+    for line in BufReader::new(file_handler).lines() {
+        let cmd: Command = serde_json::from_str(&line?)?;
+
+        if let Command::Set { key, value } = &cmd {
+            store.insert(key.to_string(), value.to_string());
+        };
+
+        if let Command::Remove { key } = &cmd {
+            store.remove(&key.to_string());
+        };
     }
+
+    Ok(store)
 }
 
 /// Command is an enum with each possible command of the database. Each enum
