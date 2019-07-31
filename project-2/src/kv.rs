@@ -1,6 +1,7 @@
 use crate::{KvStoreError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs::remove_file;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::{BufReader, LineWriter};
@@ -34,7 +35,11 @@ impl KvStore {
     pub fn open(path: &Path) -> Result<KvStore> {
         let path_buf = create_log_file(path)?;
         let file_handler = open_file_all_permissions(&path_buf)?;
+
         let store = unpack_log_file(file_handler)?;
+        let history = compact_history(&store);
+
+        write_compacted_history(history, &path_buf)?;
 
         Ok(KvStore { store, path_buf })
     }
@@ -56,7 +61,7 @@ impl KvStore {
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
         let set_cmd = Command::Set { key, value };
-        self.write_cmd(&set_cmd, open_file_append_only(&self.path_buf)?)?;
+        write_cmd(&set_cmd, open_file_append_only(&self.path_buf)?)?;
 
         if let Command::Set { key, value } = set_cmd {
             self.store.insert(key, value);
@@ -71,10 +76,6 @@ impl KvStore {
     pub fn get(&self, key: String) -> Result<Option<String>> {
         // Clone the value from the store.
         let value = self.store.get(&key).cloned();
-        self.write_cmd(
-            &Command::Get { key },
-            open_file_append_only(&self.path_buf)?,
-        )?;
 
         match value {
             Some(v) => Ok(Some(v)),
@@ -85,10 +86,10 @@ impl KvStore {
     /// Removes a key/value pair given a string key.
     pub fn remove(&mut self, key: String) -> Result<()> {
         let cmd = Command::Remove { key };
-        self.write_cmd(&cmd, open_file_append_only(&self.path_buf)?)?;
+        write_cmd(&cmd, open_file_append_only(&self.path_buf)?)?;
 
-        if let Command::Remove { key } = cmd {
-            match self.store.remove(&key) {
+        if let Command::Remove { key } = &cmd {
+            match self.store.remove(&key.to_string()) {
                 Some(_x) => return Ok(()),
                 None => return Err(KvStoreError::KeyNotFoundError),
             }
@@ -96,16 +97,16 @@ impl KvStore {
 
         Ok(())
     }
+}
 
-    /// Private helper function to write a command to the log file.
-    fn write_cmd(&self, cmd: &Command, file_handler: impl Write) -> Result<()> {
-        let mut cmd_serialized = serde_json::to_string(&cmd)?;
-        cmd_serialized.push('\n');
+/// Private helper function to write a command to the log file.
+fn write_cmd(cmd: &Command, file_handler: impl Write) -> Result<()> {
+    let mut cmd_serialized = serde_json::to_string(&cmd)?;
+    cmd_serialized.push('\n');
 
-        LineWriter::new(file_handler).write(cmd_serialized.as_bytes())?;
+    LineWriter::new(file_handler).write(cmd_serialized.as_bytes())?;
 
-        Ok(())
-    }
+    Ok(())
 }
 
 /// Creates the log file for the `write-ahead-log` given a file path.
@@ -159,6 +160,36 @@ fn unpack_log_file(file_handler: impl Read) -> Result<HashMap<String, String>> {
     }
 
     Ok(store)
+}
+
+/// A helper function that removes redundant entries in the log, returns it as
+/// a vector of commands with the intention of writing it to the log file.
+fn compact_history(store: &HashMap<String, String>) -> Vec<Command> {
+    let mut compacted_history: Vec<Command> = Vec::new();
+
+    for (key, value) in store {
+        let cmd = Command::Set {
+            key: key.to_string(),
+            value: value.to_string(),
+        };
+
+        compacted_history.push(cmd);
+    }
+
+    compacted_history
+}
+
+/// A helper function that receives a compacted history and path to the log file.
+/// It removes the logfile and rewrites it with the compacted history.
+fn write_compacted_history(history: Vec<Command>, path: &PathBuf) -> Result<()> {
+    remove_file(path)?;
+    let file_handler = open_file_all_permissions(path)?;
+
+    history
+        .into_iter()
+        .for_each(|x| write_cmd(&x, &file_handler).unwrap());
+
+    Ok(())
 }
 
 /// Command is an enum with each possible command of the database. Each enum
