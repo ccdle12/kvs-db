@@ -34,9 +34,8 @@ impl KvStore {
     /// ```
     pub fn open(path: &Path) -> Result<KvStore> {
         let path_buf = create_log_file(path)?;
-        let file_handler = open_file_all_permissions(&path_buf)?;
 
-        let store = unpack_log_file(file_handler)?;
+        let store = unpack_log_file(open_file_all_permissions(&path_buf)?)?;
         let history = compact_history(&store);
 
         write_compacted_history(history, &path_buf)?;
