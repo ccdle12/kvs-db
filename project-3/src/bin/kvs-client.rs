@@ -1,4 +1,5 @@
 extern crate structopt;
+use kvs::KvsClient;
 use std::env;
 use structopt::StructOpt;
 
@@ -54,6 +55,8 @@ fn main() {
             // 2. Do this for all instances of address.
             // 3. Address needs to be either IPV4 or IPV6 compatible.
             let server_address = parse_server_address(address);
+            let kvs_client = KvsClient::new();
+            kvs_client.connect();
 
             std::process::exit(0);
         }
