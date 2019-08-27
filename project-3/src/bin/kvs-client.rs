@@ -1,7 +1,9 @@
 extern crate structopt;
-// use kvs::{KvStore, Result};
 use std::env;
 use structopt::StructOpt;
+
+// TODO (ccdle12):
+// 1. Implement command to print the version
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "kvs", about = "A Key/Value store CLI")]
