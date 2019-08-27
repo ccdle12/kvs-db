@@ -5,7 +5,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "kvs-server", about = "The server cli for the kvs.")]
 enum Opt {
-    /// Runs the Server.
+    /// Runs the Key/Value Store server.
     #[structopt(name = "run")]
     Run {},
 }
