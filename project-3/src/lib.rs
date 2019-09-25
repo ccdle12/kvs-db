@@ -9,5 +9,6 @@ pub use error::{KvStoreError, Result};
 pub use server::KvsServer;
 
 mod client;
+mod common;
 mod error;
 mod server;
