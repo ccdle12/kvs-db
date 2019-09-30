@@ -12,14 +12,14 @@ pub trait KvsEngine {
     /// Gets the value of a given key.
     ///
     /// Returns `None` if the key does not exist.
-    fn get(&mut self, key: String) -> Result<Option<String>>;
+    fn get(&self, key: String) -> Result<Option<String>>;
 
     /// Removes a given key.
     ///
     /// # Errors
     ///
     /// An error `KvsError::KeyNotFound` is returned if a key does not exist.
-    fn remove(&self mut, key: String) -> Result<()>;
+    fn remove(&mut self, key: String) -> Result<()>;
 }
 
 mod kvs;

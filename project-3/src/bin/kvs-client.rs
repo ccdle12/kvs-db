@@ -3,6 +3,8 @@ use kvs::KvsClient;
 use std::env;
 use structopt::StructOpt;
 
+const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:4000";
+
 // TODO (ccdle12):
 // 1. Implement command to print the version
 
@@ -50,13 +52,8 @@ fn main() {
             value,
             address,
         } => {
-            // TODO (ccdle12):
-            // 1. Parse the address and return error if not an address.
-            // 2. Do this for all instances of address.
-            // 3. Address needs to be either IPV4 or IPV6 compatible.
-            let server_address = parse_server_address(address);
-            let kvs_client = KvsClient::new();
-            kvs_client.connect();
+            let addr: String = parse_server_address(address);
+            KvsClient::new().connect(addr);
 
             std::process::exit(0);
         }
@@ -72,6 +69,6 @@ fn main() {
 fn parse_server_address(address: Option<String>) -> String {
     match address {
         Some(a) => return a,
-        None => return String::from("127.0.0.1:4000"),
+        None => return String::from(DEFAULT_LISTEN_ADDR),
     };
 }

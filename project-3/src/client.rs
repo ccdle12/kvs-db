@@ -1,6 +1,8 @@
-use std::io::prelude::*;
-use std::net::TcpStream;
+use crate::Result;
+use std::net::{TcpStream, ToSocketAddrs};
 
+// TODO(ccdle12): Currently storing server address as string.
+// Maybe better as a built in class or custom class?
 pub struct KvsClient {}
 
 impl KvsClient {
@@ -8,10 +10,8 @@ impl KvsClient {
         KvsClient {}
     }
 
-    pub fn connect(&self) {
-        let mut stream = TcpStream::connect("127.0.0.1:443").unwrap();
-
-        let msg = b"Hello";
-        stream.write(msg).unwrap();
+    pub fn connect<A: ToSocketAddrs>(&self, addr: A) -> Result<()> {
+        let mut stream = TcpStream::connect(addr)?;
+        Ok(())
     }
 }
