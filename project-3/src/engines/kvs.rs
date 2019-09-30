@@ -97,7 +97,7 @@ impl KvsEngine for KvStore {
     /// Retrieves the value of the key/pair given a key as an arguement.
     ///
     /// Returns None, if the key doesn't exist.
-    pub fn get(&self, key: String) -> Result<Option<String>> {
+    fn get(&self, key: String) -> Result<Option<String>> {
         // Clone the value from the store.
         let value = self.store.get(&key).cloned();
 
@@ -122,7 +122,7 @@ impl KvsEngine for KvStore {
     /// let mut kv_store = KvStore::open(&current_dir).unwrap();
     /// kv_store.set(key.to_string(), value.to_string()).unwrap();
     /// ```
-    pub fn set(&mut self, key: String, value: String) -> Result<()> {
+    fn set(&mut self, key: String, value: String) -> Result<()> {
         let set_cmd = Command::Set { key, value };
         self.write_cmd(&set_cmd, self.log_file_append_only()?)?;
 
@@ -134,7 +134,7 @@ impl KvsEngine for KvStore {
     }
 
     /// Removes a key/value pair given a string key.
-    pub fn remove(&mut self, key: String) -> Result<()> {
+    fn remove(&mut self, key: String) -> Result<()> {
         let cmd = Command::Remove { key };
         self.write_cmd(&cmd, self.log_file_append_only()?)?;
 
