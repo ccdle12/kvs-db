@@ -1,6 +1,5 @@
 extern crate structopt;
-use kvs::KvsClient;
-use std::env;
+use kvs::{KvsClient, Result};
 use structopt::StructOpt;
 
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:4000";
@@ -45,7 +44,7 @@ enum Opt {
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
     match Opt::from_args() {
         Opt::Set {
             key,
@@ -53,22 +52,25 @@ fn main() {
             address,
         } => {
             let addr: String = parse_server_address(address);
-            KvsClient::new().connect(addr);
-
+            KvsClient::connect(addr)?.set(key, value)?;
             std::process::exit(0);
         }
         Opt::Get { key, address } => {
+            let addr: String = parse_server_address(address);
+            let res = KvsClient::connect(addr)?.get(key);
+            match res {
+                Ok(v) => println!("{}", v.unwrap()),
+                Err(_) => println!("key not found"),
+            }
             std::process::exit(0);
         }
-        Opt::Remove { key, address } => {
-            std::process::exit(0);
-        }
+        _ => std::process::exit(0),
     }
-}
 
-fn parse_server_address(address: Option<String>) -> String {
-    match address {
-        Some(a) => return a,
-        None => return String::from(DEFAULT_LISTEN_ADDR),
-    };
+    fn parse_server_address(address: Option<String>) -> String {
+        match address {
+            Some(a) => return a,
+            None => return String::from(DEFAULT_LISTEN_ADDR),
+        };
+    }
 }
