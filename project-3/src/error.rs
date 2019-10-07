@@ -13,6 +13,10 @@ pub enum KvStoreError {
     /// Error for a key not found in the key value store.
     #[fail(display = "Key not found")]
     KeyNotFoundError,
+
+    /// A error with a String message.
+    #[fail(display = "{}", _0)]
+    StringError(String),
 }
 
 impl From<std::io::Error> for KvStoreError {
