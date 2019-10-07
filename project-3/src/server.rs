@@ -1,4 +1,4 @@
-use crate::common::{Request, SetResponse};
+use crate::common::{GetResponse, Request, SetResponse};
 use crate::engines::KvsEngine;
 use crate::error::KvStoreError;
 use crate::Result;
@@ -57,6 +57,10 @@ impl<E: KvsEngine> KvsServer<E> {
                 Request::Set { key, value } => send_response!(match self.engine.set(key, value) {
                     Ok(_) => SetResponse::Ok(()),
                     Err(e) => SetResponse::Err(e.to_string()),
+                }),
+                Request::Get { key } => send_response!(match self.engine.get(key) {
+                    Ok(r) => GetResponse::Ok(r),
+                    Err(e) => GetResponse::Err(e.to_string()),
                 }),
                 _ => send_response!(SetResponse::Ok(())),
             }
