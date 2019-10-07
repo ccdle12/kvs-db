@@ -1,5 +1,6 @@
 extern crate structopt;
 use kvs::{KvStore, KvsServer, Result};
+use std::env;
 use structopt::StructOpt;
 
 /// Default listening address for the server - 127.0.0.1:4000.
@@ -19,16 +20,16 @@ enum Opt {
 }
 
 fn main() -> Result<()> {
-    // let kvs_store = KvsStore::open("./");
     match Opt::from_args() {
         Opt::Run { addr } => match addr {
             Some(a) => {
                 println!(" [x] Serving the KVS Server at {}", a);
-                // KvsServer::new(kvs_store).run(a)?
+                KvsServer::new(KvStore::open(&env::current_dir()?)?).run(a)?;
             }
             None => {
                 println!(" [x] Serving the KVS Server at {}", DEFAULT_LISTEN_ADDR);
-                // KvsServer::new(kvs_store).run(String::from(DEFAULT_LISTEN_ADDR))?
+                KvsServer::new(KvStore::open(&env::current_dir()?)?)
+                    .run(String::from(DEFAULT_LISTEN_ADDR))?
             }
         },
     };
