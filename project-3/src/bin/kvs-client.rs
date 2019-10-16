@@ -64,7 +64,15 @@ fn main() -> Result<()> {
             }
             std::process::exit(0);
         }
-        _ => std::process::exit(0),
+        Opt::Remove { key, address } => {
+            let addr: String = parse_server_address(address);
+            let res = KvsClient::connect(addr)?.remove(key);
+            match res {
+                Err(e) => println!("{}", e),
+                _ => println!(""),
+            }
+            std::process::exit(0);
+        }
     }
 
     fn parse_server_address(address: Option<String>) -> String {
