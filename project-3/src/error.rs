@@ -17,6 +17,14 @@ pub enum KvStoreError {
     /// A error with a String message.
     #[fail(display = "{}", _0)]
     StringError(String),
+
+    /// Sled DB errors.
+    #[fail(display = "{}", _0)]
+    SledError(sled::Error),
+
+    /// FromStringUtf8 Error when converting a Vec<u8> to String.
+    #[fail(display = "{}", _0)]
+    StringUtf8Error(#[cause] std::string::FromUtf8Error),
 }
 
 impl From<std::io::Error> for KvStoreError {
@@ -28,6 +36,18 @@ impl From<std::io::Error> for KvStoreError {
 impl From<serde_json::Error> for KvStoreError {
     fn from(err: serde_json::Error) -> KvStoreError {
         KvStoreError::SerdeError(err)
+    }
+}
+
+impl From<sled::Error> for KvStoreError {
+    fn from(err: sled::Error) -> KvStoreError {
+        KvStoreError::SledError(err)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for KvStoreError {
+    fn from(err: std::string::FromUtf8Error) -> KvStoreError {
+        KvStoreError::StringUtf8Error(err)
     }
 }
 
