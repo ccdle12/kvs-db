@@ -1,38 +1,73 @@
+#[macro_use]
+extern crate clap;
+extern crate env_logger;
+#[macro_use]
+extern crate log;
+extern crate stderrlog;
 extern crate structopt;
-use kvs::{KvStore, KvsServer, Result};
+
+use kvs::{KvStore, KvsEngine, KvsServer, Result, SledKvsEngine};
+use log::LevelFilter;
 use std::env;
+use std::net::SocketAddr;
 use structopt::StructOpt;
 
-/// Default listening address for the server - 127.0.0.1:4000.
+/// Default listening address for the server.
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:4000";
+const DEFAULT_ENGINE: Engine = Engine::kvs;
 
+/// Runs the Key/Value Store server.
 #[derive(Debug, StructOpt)]
 #[structopt(name = "kvs-server", about = "The server cli for the kvs.")]
-enum Opt {
-    /// Runs the Key/Value Store server.
-    #[structopt(name = "run")]
-    Run {
-        #[structopt(
-            help = "The ip address and port as <IP:PORT> the server is serving from, runs the server on default settings if left blank."
-        )]
-        addr: Option<String>,
-    },
+struct Opt {
+    #[structopt(
+        short = "a",
+        long,
+        help = "Sets the listening adress",
+        value_name = "IP:PORT",
+        raw(default_value = "DEFAULT_LISTEN_ADDR"),
+        parse(try_from_str)
+    )]
+    addr: SocketAddr,
+
+    #[structopt(
+        short = "e",
+        long,
+        help = "Sets the engine for the key value store",
+        value_name = "ENGINE-NAME",
+        raw(possible_values = "&Engine::variants()")
+    )]
+    engine: Option<Engine>,
+}
+
+// Wraps the enum as a clap enum. Implements the function ::variants().
+// Allows the enum to be used in the struct to use the enum as a cli value.
+arg_enum! {
+  #[allow(non_camel_case_types)]
+  #[derive(Debug)]
+  enum Engine {
+    kvs,
+    sled,
+  }
 }
 
 fn main() -> Result<()> {
-    match Opt::from_args() {
-        Opt::Run { addr } => match addr {
-            Some(a) => {
-                println!(" [x] Serving the KVS Server at {}", a);
-                KvsServer::new(KvStore::open(&env::current_dir()?)?).run(a)?;
-            }
-            None => {
-                println!(" [x] Serving the KVS Server at {}", DEFAULT_LISTEN_ADDR);
-                KvsServer::new(KvStore::open(&env::current_dir()?)?)
-                    .run(String::from(DEFAULT_LISTEN_ADDR))?
-            }
-        },
-    };
+    // Apparently uses the log crate as a facade.
+    env_logger::builder().filter_level(LevelFilter::Info).init();
 
-    Ok(())
+    let opt = Opt::from_args();
+    info!("kvs-server {}", env!("CARGO_PKG_VERSION"));
+    info!("Listening on {}", opt.addr);
+
+    match opt.engine.unwrap_or(DEFAULT_ENGINE) {
+        Engine::kvs => run_with_engine(KvStore::open(&env::current_dir()?)?, opt.addr),
+        Engine::sled => run_with_engine(SledKvsEngine::new()?, opt.addr),
+    }
+}
+
+/// Internal helper function that runs a a KvsServer given the trait KvsEngine
+/// and runs the server. Purely for readability in the main function.
+fn run_with_engine<E: KvsEngine>(engine: E, addr: SocketAddr) -> Result<()> {
+    let server = KvsServer::new(engine);
+    server.run(addr)
 }
