@@ -4,9 +4,10 @@ extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 extern crate serde;
+extern crate sled;
 
 pub use client::KvsClient;
-pub use engines::KvStore;
+pub use engines::{KvStore, KvsEngine, SledKvsEngine};
 pub use error::{KvStoreError, Result};
 pub use server::KvsServer;
 
