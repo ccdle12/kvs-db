@@ -48,12 +48,12 @@ impl KvStore {
 
         path_buf.push("log");
         path_buf.set_extension("txt");
+
         let file_handler = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .open(&path_buf)
-            .expect("failed to create file using path_buf");
+            .open(&path_buf)?;
 
         // Create the kv store.
         let mut store = HashMap::new();
@@ -75,21 +75,24 @@ impl KvStore {
         Ok(KvStore { store, path_buf })
     }
 
-    /// Private helper function to write a command to the log file.
-    fn write_cmd(&self, cmd: &Command, file_handler: impl Write) -> Result<()> {
-        let mut cmd_serialized = serde_json::to_string(&cmd)?;
-        cmd_serialized.push('\n');
-
-        LineWriter::new(file_handler).write(cmd_serialized.as_bytes())?;
-
-        Ok(())
-    }
-
     /// Private helper function to return a file handler as read only to the log.
     fn log_file_append_only(&self) -> Result<File> {
-        let file_handler = OpenOptions::new().append(true).open(&self.path_buf)?;
-        Ok(file_handler)
+        Ok(OpenOptions::new().append(true).open(&self.path_buf)?)
     }
+}
+
+macro_rules! write_cmd {
+    ($command:expr, $file_handler:expr) => {{
+        let c = $command;
+        let f = $file_handler;
+
+        let mut cmd = serde_json::to_string(&c)?;
+        cmd.push('\n');
+
+        LineWriter::new(f).write(cmd.as_bytes())?;
+
+        Ok(())
+    } as Result<()>};
 }
 
 /// KvsEngine trait implementation on the concrete struct KvStore.
@@ -99,9 +102,7 @@ impl KvsEngine for KvStore {
     /// Returns None, if the key doesn't exist.
     fn get(&self, key: String) -> Result<Option<String>> {
         // Clone the value from the store.
-        let value = self.store.get(&key).cloned();
-
-        match value {
+        match self.store.get(&key).cloned() {
             Some(v) => Ok(Some(v)),
             None => Err(KvStoreError::KeyNotFoundError),
         }
@@ -124,7 +125,7 @@ impl KvsEngine for KvStore {
     /// ```
     fn set(&mut self, key: String, value: String) -> Result<()> {
         let set_cmd = Command::Set { key, value };
-        self.write_cmd(&set_cmd, self.log_file_append_only()?)?;
+        write_cmd!(&set_cmd, self.log_file_append_only()?)?;
 
         if let Command::Set { key, value } = set_cmd {
             self.store.insert(key, value);
@@ -136,7 +137,7 @@ impl KvsEngine for KvStore {
     /// Removes a key/value pair given a string key.
     fn remove(&mut self, key: String) -> Result<()> {
         let cmd = Command::Remove { key };
-        self.write_cmd(&cmd, self.log_file_append_only()?)?;
+        write_cmd!(&cmd, &self.log_file_append_only()?)?;
 
         if let Command::Remove { key } = cmd {
             match self.store.remove(&key) {
