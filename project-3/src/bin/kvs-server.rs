@@ -21,7 +21,6 @@ const DEFAULT_ENGINE: Engine = Engine::kvs;
 #[structopt(name = "kvs-server", about = "The server cli for the kvs.")]
 struct Opt {
     #[structopt(
-        short = "a",
         long,
         help = "Sets the listening adress",
         value_name = "IP:PORT",
@@ -65,7 +64,7 @@ fn main() -> Result<()> {
     }
 }
 
-/// Internal helper function that runs a a KvsServer given the trait KvsEngine
+/// Internal helper function that runs a KvsServer given the trait KvsEngine
 /// and runs the server. Purely for readability in the main function.
 fn run_with_engine<E: KvsEngine>(engine: E, addr: SocketAddr) -> Result<()> {
     let server = KvsServer::new(engine);
