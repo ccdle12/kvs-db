@@ -49,7 +49,7 @@ impl KvsClient {
         let res = GetResponse::deserialize(&mut self.reader)?;
         match res {
             GetResponse::Ok(r) => Ok(r),
-            GetResponse::Err(s) => Err(KvStoreError::StringError(s)),
+            GetResponse::Err(_) => Err(KvStoreError::KeyNotFoundError),
         }
     }
 
