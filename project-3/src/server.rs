@@ -1,5 +1,6 @@
 use crate::common::{GetResponse, RemoveResponse, Request, SetResponse};
 use crate::engines::KvsEngine;
+use crate::error::KvStoreError;
 use crate::Result;
 use serde_json::Deserializer;
 use std::io::prelude::*;
@@ -46,7 +47,7 @@ impl<E: KvsEngine> KvsServer<E> {
                 }),
                 Request::Get { key } => send_response!(match self.engine.get(key) {
                     Ok(r) => GetResponse::Ok(r),
-                    Err(e) => GetResponse::Err(e.to_string()),
+                    Err(_) => GetResponse::Err(KvStoreError::KeyNotFoundError.to_string()),
                 }),
                 Request::Remove { key } => send_response!(match self.engine.remove(key) {
                     Ok(_) => RemoveResponse::Ok(()),
