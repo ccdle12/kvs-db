@@ -13,14 +13,14 @@ enum Opt {
     /// Sets a string key/value pair
     #[structopt(name = "set")]
     Set {
-        #[structopt(short = "k", help = "The key string of the key/value pair")]
+        #[structopt(help = "The key string of the key/value pair")]
         key: String,
 
-        #[structopt(short = "v", help = "The value string of the key/value pair")]
+        #[structopt(help = "The value string of the key/value pair")]
         value: String,
 
-        #[structopt(short = "a", help = "The server address as IP:PORT")]
-        address: Option<String>,
+        #[structopt(long, help = "The server address as IP:PORT")]
+        addr: Option<String>,
     },
 
     /// Gets a string value according to passed string key
@@ -29,8 +29,8 @@ enum Opt {
         #[structopt(help = "The key string of the key/value pair")]
         key: String,
 
-        #[structopt(short = "a", help = "The server address as IP:PORT")]
-        address: Option<String>,
+        #[structopt(long, help = "The server address as IP:PORT")]
+        addr: Option<String>,
     },
 
     /// Removes the string key/value pair according to the passed string key
@@ -39,34 +39,33 @@ enum Opt {
         #[structopt(help = "The key string of the key/value pair")]
         key: String,
 
-        #[structopt(short = "a", help = "The server address as IP:PORT")]
-        address: Option<String>,
+        #[structopt(long, help = "The server address as IP:PORT")]
+        addr: Option<String>,
     },
 }
 
 fn main() -> Result<()> {
     match Opt::from_args() {
-        Opt::Set {
-            key,
-            value,
-            address,
-        } => {
-            let addr: String = parse_server_address(address);
-            KvsClient::connect(addr)?.set(key, value)?;
+        Opt::Set { key, value, addr } => {
+            let a: String = parse_server_address(addr);
+            KvsClient::connect(a)?.set(key, value)?;
+
             std::process::exit(0);
         }
-        Opt::Get { key, address } => {
-            let addr: String = parse_server_address(address);
-            let res = KvsClient::connect(addr)?.get(key);
+
+        Opt::Get { key, addr } => {
+            let a: String = parse_server_address(addr);
+            let res = KvsClient::connect(a)?.get(key);
             match res {
                 Ok(v) => println!("{}", v.unwrap()),
-                Err(_) => println!("key not found"),
+                Err(e) => println!("{}", e),
             }
             std::process::exit(0);
         }
-        Opt::Remove { key, address } => {
-            let addr: String = parse_server_address(address);
-            let res = KvsClient::connect(addr)?.remove(key);
+
+        Opt::Remove { key, addr } => {
+            let a: String = parse_server_address(addr);
+            let res = KvsClient::connect(a)?.remove(key);
             match res {
                 Err(e) => println!("{}", e),
                 _ => println!(""),
