@@ -271,29 +271,29 @@ fn cli_access_server(engine: &str, addr: &str) {
         .success()
         .stdout(contains("Key not found"));
 
-    // Command::cargo_bin("kvs-client")
-    // .unwrap()
-    // .args(&["rm", "key2", "--addr", addr])
-    // .current_dir(&temp_dir)
-    // .assert()
-    // .failure()
-    // .stderr(contains("Key not found"));
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["rm", "key2", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .failure()
+        .stderr(contains("Key not found"));
 
-    // Command::cargo_bin("kvs-client")
-    // .unwrap()
-    // .args(&["set", "key2", "value3", "--addr", addr])
-    // .current_dir(&temp_dir)
-    // .assert()
-    // .success()
-    // .stdout(is_empty());
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["set", "key2", "value3", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(is_empty());
 
-    // Command::cargo_bin("kvs-client")
-    // .unwrap()
-    // .args(&["rm", "key1", "--addr", addr])
-    // .current_dir(&temp_dir)
-    // .assert()
-    // .success()
-    // .stdout(is_empty());
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["rm", "key1", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(is_empty());
 
     sender.send(()).unwrap();
     handle.join().unwrap();

@@ -19,8 +19,12 @@ enum Opt {
         #[structopt(help = "The value string of the key/value pair")]
         value: String,
 
-        #[structopt(long, help = "The server address as IP:PORT")]
-        addr: Option<String>,
+        #[structopt(
+            long,
+            help = "The server address as IP:PORT",
+            raw(default_value = "DEFAULT_LISTEN_ADDR")
+        )]
+        addr: String,
     },
 
     /// Gets a string value according to passed string key
@@ -29,8 +33,12 @@ enum Opt {
         #[structopt(help = "The key string of the key/value pair")]
         key: String,
 
-        #[structopt(long, help = "The server address as IP:PORT")]
-        addr: Option<String>,
+        #[structopt(
+            long,
+            help = "The server address as IP:PORT",
+            raw(default_value = "DEFAULT_LISTEN_ADDR")
+        )]
+        addr: String,
     },
 
     /// Removes the string key/value pair according to the passed string key
@@ -39,45 +47,36 @@ enum Opt {
         #[structopt(help = "The key string of the key/value pair")]
         key: String,
 
-        #[structopt(long, help = "The server address as IP:PORT")]
-        addr: Option<String>,
+        #[structopt(
+            long,
+            help = "The server address as IP:PORT",
+            raw(default_value = "DEFAULT_LISTEN_ADDR")
+        )]
+        addr: String,
     },
 }
 
 fn main() -> Result<()> {
     match Opt::from_args() {
         Opt::Set { key, value, addr } => {
-            let a: String = parse_server_address(addr);
-            KvsClient::connect(a)?.set(key, value)?;
+            KvsClient::connect(addr)?.set(key, value)?;
 
             std::process::exit(0);
         }
 
         Opt::Get { key, addr } => {
-            let a: String = parse_server_address(addr);
-            let res = KvsClient::connect(a)?.get(key);
+            // KvsClient::connect(addr)?.get(key)
+            let res = KvsClient::connect(addr)?.get(key);
             match res {
-                Ok(v) => println!("{}", v.unwrap()),
+                Ok(v) => match v {
+                    Some(v) => println!("{}", v),
+                    None => println!("Key not found"),
+                },
                 Err(e) => println!("{}", e),
             }
             std::process::exit(0);
         }
 
-        Opt::Remove { key, addr } => {
-            let a: String = parse_server_address(addr);
-            let res = KvsClient::connect(a)?.remove(key);
-            match res {
-                Err(e) => println!("{}", e),
-                _ => println!(""),
-            }
-            std::process::exit(0);
-        }
-    }
-
-    fn parse_server_address(address: Option<String>) -> String {
-        match address {
-            Some(a) => return a,
-            None => return String::from(DEFAULT_LISTEN_ADDR),
-        };
+        Opt::Remove { key, addr } => KvsClient::connect(addr)?.remove(key),
     }
 }

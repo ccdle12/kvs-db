@@ -55,13 +55,10 @@ impl KvsClient {
 
     /// Removes a kv pair.
     pub fn remove(&mut self, key: String) -> Result<()> {
-        let request = Request::Remove { key };
-
-        serde_json::to_writer(&mut self.writer, &request)?;
+        serde_json::to_writer(&mut self.writer, &Request::Remove { key })?;
         self.writer.flush()?;
 
-        let res = RemoveResponse::deserialize(&mut self.reader)?;
-        match res {
+        match RemoveResponse::deserialize(&mut self.reader)? {
             RemoveResponse::Ok(r) => Ok(r),
             RemoveResponse::Err(e) => Err(KvStoreError::StringError(e)),
         }
