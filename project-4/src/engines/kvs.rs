@@ -6,6 +6,7 @@ use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::{BufReader, LineWriter};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 /// Command is an enum with each possible command of the database. Each enum
 /// command will be serialized to a log file and used as the basis for populating/
@@ -21,9 +22,10 @@ pub enum Command {
 ///
 /// Key/value pairs are stored in a `HashMap` in memory and not persisted to
 /// disk.
+#[derive(Clone)]
 pub struct KvStore {
     /// Store is the in memory key/value store.
-    store: HashMap<String, String>,
+    store: Arc<Mutex<HashMap<String, String>>>,
 
     /// The path to the logs folder, containing the log of events for the DB.
     path_buf: PathBuf,
@@ -72,7 +74,10 @@ impl KvStore {
             };
         }
 
-        Ok(KvStore { store, path_buf })
+        Ok(KvStore {
+            store: Arc::new(Mutex::new(store)),
+            path_buf,
+        })
     }
 
     /// Private helper function to return a file handler as read only to the log.
@@ -102,7 +107,7 @@ impl KvsEngine for KvStore {
     /// Returns None, if the key doesn't exist.
     fn get(&self, key: String) -> Result<Option<String>> {
         // Clone the value from the store.
-        match self.store.get(&key).cloned() {
+        match self.store.lock().unwrap().get(&key).cloned() {
             Some(v) => Ok(Some(v)),
             None => Err(KvStoreError::KeyNotFoundError),
         }
@@ -123,24 +128,24 @@ impl KvsEngine for KvStore {
     /// let mut kv_store = KvStore::open(&current_dir).unwrap();
     /// kv_store.set(key.to_string(), value.to_string()).unwrap();
     /// ```
-    fn set(&mut self, key: String, value: String) -> Result<()> {
+    fn set(&self, key: String, value: String) -> Result<()> {
         let set_cmd = Command::Set { key, value };
         write_cmd!(&set_cmd, self.log_file_append_only()?)?;
 
         if let Command::Set { key, value } = set_cmd {
-            self.store.insert(key, value);
+            self.store.lock().unwrap().insert(key, value);
         }
 
         Ok(())
     }
 
     /// Removes a key/value pair given a string key.
-    fn remove(&mut self, key: String) -> Result<()> {
+    fn remove(&self, key: String) -> Result<()> {
         let cmd = Command::Remove { key };
         write_cmd!(&cmd, &self.log_file_append_only()?)?;
 
         if let Command::Remove { key } = cmd {
-            match self.store.remove(&key) {
+            match self.store.lock().unwrap().remove(&key) {
                 Some(_x) => return Ok(()),
                 None => return Err(KvStoreError::KeyNotFoundError),
             }
