@@ -2,6 +2,7 @@ use super::KvsEngine;
 use crate::Result;
 use sled::Db;
 
+#[derive(Clone)]
 pub struct SledKvsEngine {
     engine: Db,
     // engine: Tree,
@@ -16,7 +17,7 @@ impl SledKvsEngine {
 }
 
 impl KvsEngine for SledKvsEngine {
-    fn set(&mut self, key: String, value: String) -> Result<()> {
+    fn set(&self, key: String, value: String) -> Result<()> {
         self.engine.insert(key.as_bytes(), value.as_bytes())?;
         Ok(())
     }
@@ -30,7 +31,7 @@ impl KvsEngine for SledKvsEngine {
             .transpose()?)
     }
 
-    fn remove(&mut self, key: String) -> Result<()> {
+    fn remove(&self, key: String) -> Result<()> {
         self.engine.remove(key.as_bytes())?;
         Ok(())
     }
