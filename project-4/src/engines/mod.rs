@@ -3,11 +3,11 @@
 use crate::Result;
 
 /// Trait (interface) for the key value storage engine.
-pub trait KvsEngine {
+pub trait KvsEngine: Clone + Send + 'static {
     /// Sets value of a key - all strings.
     ///
     /// If the key already exists then the value will be overwritten.
-    fn set(&mut self, key: String, value: String) -> Result<()>;
+    fn set(&self, key: String, value: String) -> Result<()>;
 
     /// Gets the value of a given key.
     ///
@@ -19,7 +19,7 @@ pub trait KvsEngine {
     /// # Errors
     ///
     /// An error `KvsError::KeyNotFound` is returned if a key does not exist.
-    fn remove(&mut self, key: String) -> Result<()>;
+    fn remove(&self, key: String) -> Result<()>;
 }
 
 mod kvs;
