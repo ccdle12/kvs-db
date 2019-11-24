@@ -65,7 +65,6 @@ fn main() -> Result<()> {
         }
 
         Opt::Get { key, addr } => {
-            // KvsClient::connect(addr)?.get(key)
             let res = KvsClient::connect(addr)?.get(key);
             match res {
                 Ok(v) => match v {
