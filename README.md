@@ -11,7 +11,7 @@ Further reading:
 
 ## Project Structure
 
-- [course examples](course-examples/) - Archived projects from pna
+- [course examples](course-examples/) - My archived entries for each project in the PingCap course
 - [src](src/) - The main area of the project
 - [tests](tests/) - Integration tests
 
