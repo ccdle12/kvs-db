@@ -30,15 +30,16 @@ struct ByteOffset {
 /// Private helper function to format the offset length. It's pretty verbose
 /// but due to the nature "Off-by-one" errors, it's preferrable to contain
 /// this logic in a function and make it extremely clear that this function
-/// is required to avoid potentially a very annoying bug.
+/// is required to avoid potentially very annoying bugs.
 fn get_byte_length(cmd: &String) -> u16 {
     cmd.len() as u16 + 1
 }
 
 /// The `KvStore` stores a key/value pair of strings.
 ///
-/// Key/value pairs are stored in a `HashMap` in memory and not persisted to
-/// disk.
+/// The store keeps in-memory `offset_map` recording the key and byte offset
+/// of it's entry in a log file on disk. Each key/value pair is added to an
+/// append only list in peristance storage on disk.
 pub struct KvStore {
     /// OffsetMap is the in memory key/value store, tracking a particular key
     /// and it's byte offest.
@@ -51,8 +52,8 @@ pub struct KvStore {
     /// starts from the first character in the key.
     current_offset: u16,
 
-    /// Available compaction is the variable that tracks the amount in bytes
-    /// that can be compacted from the log file.
+    /// Uncompacted bytes tracks the amount in bytes that can be compacted
+    /// from the log file.
     uncompacted_bytes: u16,
 }
 
@@ -140,7 +141,7 @@ macro_rules! write_cmd {
 impl KvsEngine for KvStore {
     /// Retrieves the value of the key/pair given a key as an arguement.
     ///
-    /// Returns None, if the key doesn't exist.
+    /// Raises a KeyNotFoundError if it doesn't exist.
     /// TODO: We only need to write SET commands to the DB./
     /// TODO: rename byte_length to cmd_byte_length
     fn get(&self, key: String) -> Result<Option<String>> {
