@@ -1,8 +1,8 @@
 //! A library for a TCP client and server to run a write-ahead-log kv store.
 
 extern crate failure;
-// #[macro_use]
-// extern crate failure_derive;
+#[macro_use]
+extern crate failure_derive;
 extern crate serde;
 
 pub use client::KvsClient;

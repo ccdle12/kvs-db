@@ -1,4 +1,4 @@
-use kvs::{KvStore, KvsEngine, Result};
+use kvs::{KvStore, KvStoreError, KvsEngine, Result};
 use tempfile::TempDir;
 use walkdir::WalkDir;
 
@@ -9,76 +9,95 @@ fn get_stored_value() -> Result<()> {
     let mut store = KvStore::open(temp_dir.path())?;
 
     // TODO: to_owned may not be necessary as it clones the value.
-    store.set("key1".to_owned(), "value1".to_owned())?;
-    store.set("key2".to_owned(), "value2".to_owned())?;
+    store.set("key1".into(), "value1".into())?;
+    store.set("key2".into(), "value2".into())?;
 
-    assert_eq!(store.get("key1".to_owned())?, Some("value1".to_owned()));
-    assert_eq!(store.get("key2".to_owned())?, Some("value2".to_owned()));
+    assert_eq!(store.get("key1".into())?, Some("value1".into()));
+    assert_eq!(store.get("key2".into())?, Some("value2".into()));
 
-    // Open from disk again and check persistent data
+    // Drop the store from memory and open the connection again. This will force
+    // the DB to re-read the log file from disk and repopulate the in memory
+    // offset map.
     drop(store);
     let store = KvStore::open(temp_dir.path())?;
-    assert_eq!(store.get("key1".to_owned())?, Some("value1".to_owned()));
-    assert_eq!(store.get("key2".to_owned())?, Some("value2".to_owned()));
+    assert_eq!(store.get("key1".into())?, Some("value1".into()));
+    assert_eq!(store.get("key2".into())?, Some("value2".into()));
 
     Ok(())
 }
 
-// Should overwrite existent value
-// #[test]
-// fn overwrite_value() -> Result<()> {
-//     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-//     let mut store = KvStore::open(temp_dir.path())?;
+/// This test should overwrite the previous key value pair.
+#[test]
+fn overwrite_value() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let mut store = KvStore::open(temp_dir.path())?;
 
-//     store.set("key1".to_owned(), "value1".to_owned())?;
-//     assert_eq!(store.get("key1".to_owned())?, Some("value1".to_owned()));
-//     store.set("key1".to_owned(), "value2".to_owned())?;
-//     assert_eq!(store.get("key1".to_owned())?, Some("value2".to_owned()));
+    // Overwrite a key and expect the value to be changed on a get request.
+    store.set("key1".into(), "value1".into())?;
+    assert_eq!(store.get("key1".into())?, Some("value1".into()));
 
-//     // Open from disk again and check persistent data
-//     drop(store);
-//     let mut store = KvStore::open(temp_dir.path())?;
-//     assert_eq!(store.get("key1".to_owned())?, Some("value2".to_owned()));
-//     store.set("key1".to_owned(), "value3".to_owned())?;
-//     assert_eq!(store.get("key1".to_owned())?, Some("value3".to_owned()));
+    store.set("key1".into(), "value2".into())?;
+    assert_eq!(store.get("key1".into())?, Some("value2".into()));
 
-//     Ok(())
-// }
+    // Open from disk again and assert previously persisted values and overwrite
+    // a key.
+    drop(store);
+    let mut store = KvStore::open(temp_dir.path())?;
+    assert_eq!(store.get("key1".into())?, Some("value2".into()));
 
-// // Should get `None` when getting a non-existent key
-// #[test]
-// fn get_non_existent_value() -> Result<()> {
-//     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-//     let mut store = KvStore::open(temp_dir.path())?;
+    store.set("key1".into(), "value3".into())?;
+    assert_eq!(store.get("key1".into())?, Some("value3".into()));
 
-//     store.set("key1".to_owned(), "value1".to_owned())?;
-//     assert_eq!(store.get("key2".to_owned())?, None);
+    Ok(())
+}
 
-//     // Open from disk again and check persistent data
-//     drop(store);
-//     let mut store = KvStore::open(temp_dir.path())?;
-//     assert_eq!(store.get("key2".to_owned())?, None);
+// Should get `None` when getting a non-existent key
+#[test]
+fn get_non_existent_value() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let mut store = KvStore::open(temp_dir.path())?;
 
-//     Ok(())
-// }
+    store.set("key1".into(), "value1".into())?;
+    assert!(store.get("key2".into()).is_err());
 
-// #[test]
-// fn remove_non_existent_key() -> Result<()> {
-//     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-//     let mut store = KvStore::open(temp_dir.path())?;
-//     assert!(store.remove("key1".to_owned()).is_err());
-//     Ok(())
-// }
+    // Open from disk again and check persistent data
+    drop(store);
+    let store = KvStore::open(temp_dir.path())?;
+    assert!(store.get("key2".into()).is_err());
 
-// #[test]
-// fn remove_key() -> Result<()> {
-//     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-//     let mut store = KvStore::open(temp_dir.path())?;
-//     store.set("key1".to_owned(), "value1".to_owned())?;
-//     assert!(store.remove("key1".to_owned()).is_ok());
-//     assert_eq!(store.get("key1".to_owned())?, None);
-//     Ok(())
-// }
+    Ok(())
+}
+
+#[test]
+fn remove_non_existent_key() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+
+    let mut store = KvStore::open(temp_dir.path())?;
+    assert!(store.remove("key1".into()).is_err());
+
+    Ok(())
+}
+
+#[test]
+fn remove_key() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+
+    let mut store = KvStore::open(temp_dir.path())?;
+    store.set("key1".into(), "value1".into())?;
+
+    assert!(store.remove("key1".into()).is_ok());
+    assert!(store.get("key1".into()).is_err());
+
+    // Drop the connection, reopen and check that reading from the log file
+    // on open does not crash.
+    drop(store);
+    let store = KvStore::open(temp_dir.path())?;
+
+    // Getting key1 should return a KeyNotFoundError.
+    assert!(store.get("key1".into()).is_err());
+
+    Ok(())
+}
 
 // // Insert data until total size of the directory decreases.
 // // Test data correctness after compaction.

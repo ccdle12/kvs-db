@@ -4,12 +4,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::prelude::*;
+
+// TODO: TEMP
+use std::io::SeekFrom;
+
 use std::io::{BufReader, LineWriter};
 use std::path::{Path, PathBuf};
 
-/// Command is an enum with each possible command of the database. Each enum
-/// command will be serialized to a log file and used as the basis for populating/
-/// updating an in-memory key/value store.
+/// Command is an enum that represents each possible Read/Write command to the
+/// DB. Each enum command will be serialized to a log file and used as the basis
+/// for populatin and updating the in-memory key/value store.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
     Set { key: String, value: String },
@@ -17,16 +21,39 @@ pub enum Command {
     Remove { key: String },
 }
 
+/// TODO: Rename and work on this struct more
+struct ByteOffset {
+    start_offset: u16,
+    byte_length: u16,
+}
+
+/// Private helper function to format the offset length. It's pretty verbose
+/// but due to the nature "Off-by-one" errors, it's preferrable to contain
+/// this logic in a function and make it extremely clear that this function
+/// is required to avoid potentially a very annoying bug.
+fn get_byte_length(cmd: &String) -> u16 {
+    cmd.len() as u16 + 1
+}
+
 /// The `KvStore` stores a key/value pair of strings.
 ///
 /// Key/value pairs are stored in a `HashMap` in memory and not persisted to
 /// disk.
 pub struct KvStore {
-    /// Store is the in memory key/value store.
-    store: HashMap<String, String>,
+    /// OffsetMap is the in memory key/value store, tracking a particular key
+    /// and it's byte offest.
+    offset_map: HashMap<String, ByteOffset>,
 
     /// The path to the logs folder, containing the log of events for the DB.
     path_buf: PathBuf,
+
+    /// The current byte offset of the last key/value pair. The byte offset
+    /// starts from the first character in the key.
+    current_offset: u16,
+
+    /// Available compaction is the variable that tracks the amount in bytes
+    /// that can be compacted from the log file.
+    uncompacted_bytes: u16,
 }
 
 impl KvStore {
@@ -49,38 +76,53 @@ impl KvStore {
         path_buf.push("log");
         path_buf.set_extension("txt");
 
-        let file_handler = OpenOptions::new()
+        let log_file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .open(&path_buf)?;
 
-        // Create the kv store.
-        let mut store = HashMap::new();
+        let mut offset_map = HashMap::new();
 
-        // Open the log file and deserialize to the in-memory store.
-        for line in BufReader::new(file_handler).lines() {
-            let cmd: Command = serde_json::from_str(&line?)?;
+        let mut current_offset = 0;
+        for line in BufReader::new(log_file).lines() {
+            let line_cmd = line?;
+            let cmd: Command = serde_json::from_str(&line_cmd)?;
 
             if let Command::Set { key, value } = &cmd {
-                store.insert(key.to_string(), value.to_string());
+                let offset = ByteOffset {
+                    start_offset: current_offset,
+                    byte_length: get_byte_length(&line_cmd),
+                };
+
+                offset_map.insert(key.into(), offset);
             };
 
-            if let Command::Remove { key } = &cmd {
-                store.remove(key);
-            };
+            current_offset += get_byte_length(&line_cmd);
         }
 
-        Ok(KvStore { store, path_buf })
+        Ok(KvStore {
+            offset_map,
+            path_buf,
+            current_offset,
+            uncompacted_bytes: 0,
+        })
     }
 
-    /// Private helper function to return a file handler as read only to the log.
-    fn log_file(&self) -> Result<File> {
+    /// Private helper function to return a file handler as read only to the
+    /// DB log file.
+    fn log_file_write(&self) -> Result<File> {
         Ok(OpenOptions::new().append(true).open(&self.path_buf)?)
+    }
+
+    /// Private helper function to return a file handler as write only to the
+    /// DB log file.
+    fn log_file_read(&self) -> Result<File> {
+        Ok(OpenOptions::new().read(true).open(&self.path_buf)?)
     }
 }
 
-/// Macro to write a command to a file handler.
+/// Macro to write a command to the DB log file.
 macro_rules! write_cmd {
     ($command:expr, $file_handler:expr) => {{
         let c = $command;
@@ -99,25 +141,50 @@ impl KvsEngine for KvStore {
     /// Retrieves the value of the key/pair given a key as an arguement.
     ///
     /// Returns None, if the key doesn't exist.
+    /// TODO: We only need to write SET commands to the DB./
+    /// TODO: rename byte_length to cmd_byte_length
     fn get(&self, key: String) -> Result<Option<String>> {
-        match self.store.get(&key).cloned() {
-            Some(v) => Ok(Some(v.to_string())),
-            None => Err(KvStoreError::KeyNotFoundError),
+        if let Some(v) = self.offset_map.get(&key) {
+            let mut reader = BufReader::new(self.log_file_read()?);
+
+            let cursor = SeekFrom::Start(v.start_offset.into());
+            reader.seek(cursor)?;
+
+            let mut buffer = vec![0u8; v.byte_length.into()];
+            reader.read_exact(&mut buffer)?;
+
+            if let Command::Set { key, value } = serde_json::from_slice(&buffer)? {
+                return Ok(Some(value));
+            }
         }
+
+        Err(KvStoreError::KeyNotFoundError)
     }
 
     /// Sets a string value according to a key.
     /// If the key already exists the value will be overwritten.
     ///
+    ///
     /// TODO: Figure out the failing doc test that has been removed. Use the
     /// course-examples/ for reference.
     fn set(&mut self, key: String, value: String) -> Result<()> {
-        let set_cmd = Command::Set { key, value };
-        write_cmd!(&set_cmd, self.log_file()?)?;
+        let set_cmd = Command::Set {
+            key: key.clone(),
+            value,
+        };
+        write_cmd!(&set_cmd, self.log_file_write()?)?;
 
-        if let Command::Set { key, value } = set_cmd {
-            self.store.insert(key, value);
-        }
+        let cmd = serde_json::to_string(&set_cmd)?;
+        let offset = ByteOffset {
+            start_offset: self.current_offset,
+            byte_length: get_byte_length(&cmd),
+        };
+
+        if let Some(duplicate_key) = self.offset_map.insert(key, offset) {
+            self.uncompacted_bytes += duplicate_key.byte_length;
+        };
+
+        self.current_offset += get_byte_length(&cmd);
 
         Ok(())
     }
@@ -125,10 +192,10 @@ impl KvsEngine for KvStore {
     /// Removes a key/value pair given a string key.
     fn remove(&mut self, key: String) -> Result<()> {
         let cmd = Command::Remove { key };
-        write_cmd!(&cmd, &self.log_file()?)?;
+        write_cmd!(&cmd, &self.log_file_write()?)?;
 
         if let Command::Remove { key } = cmd {
-            match self.store.remove(&key) {
+            match self.offset_map.remove(&key) {
                 Some(_x) => return Ok(()),
                 None => return Err(KvStoreError::KeyNotFoundError),
             }
