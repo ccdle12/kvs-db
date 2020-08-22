@@ -3,6 +3,8 @@ use kvs::{KvsClient, Result};
 use structopt::StructOpt;
 
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:4000";
+// TEMP:
+// const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:5555";
 
 // TODO: Remove opt struct and just use the clap macro like in:
 // https://github.com/ccdle12/bitcoin-regtest/blob/master/cli/src/bin/regtest-cli.rs

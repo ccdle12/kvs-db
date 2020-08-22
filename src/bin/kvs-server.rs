@@ -14,6 +14,7 @@ use structopt::StructOpt;
 
 /// Default listening address for the server.
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:4000";
+// const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:5555";
 const DEFAULT_ENGINE: Engine = Engine::kvs;
 
 /// Runs the Key/Value Store server.
